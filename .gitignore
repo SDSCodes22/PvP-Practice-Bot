@@ -8,6 +8,7 @@ __pycache__/
 *$py.class
 # Project specific
 *.db
+service_account.json
 # C extensions
 *.so
 
