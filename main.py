@@ -4,11 +4,15 @@ import os
 import aiosqlite
 from helper import *
 import firebase_helper
+from assets.drawer import *
+import io
 
 # Initialize variables and the bot
 TOKEN = get_key(".env", "DISCORD_TOKEN")
 guild_ids = [1230836040588071004]
-bot = discord.Bot()
+intents = discord.Intents.default()
+intents.members = True
+bot = discord.Bot(intents=intents)
 
 RANK_MAP = {
     "LT5": 1,
@@ -59,10 +63,12 @@ async def ping(ctx):
 @discord.option(
     "user",
     discord.Member,
-    choices=["LT5", "HT5", "LT4", "HT4", "LT3", "HT3", "LT2", "HT2", "LT1", "HT1"],
 )
 @discord.option("kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal"])
-async def giverank(ctx, rank: str, kit: str, user: discord.Member, score: str):
+@discord.option("region", str, choices=["NA", "EU", "AS"])
+async def giverank(
+    ctx, rank: str, kit: str, region: str, user: discord.Member, score: str
+):
     db = await initialize_tables()
     # Check if they have the tester rank
     tester_id = await get_rank_id(db, ctx.guild_id, "tester")
@@ -76,6 +82,25 @@ async def giverank(ctx, rank: str, kit: str, user: discord.Member, score: str):
         await ctx.respond(embed=embed, ephemeral=True)
         return
     # Now only Tier testers
+
+    # Check if it has been less than MIN_TEST_WAIT_TIME days
+    days_since_last_test = firebase_helper.get_last_tested(ctx.guild_id, user.id, kit)
+    if days_since_last_test < MIN_TEST_WAIT_TIME:
+        embed = discord.Embed(
+            color=discord.Color.from_rgb(255, 75, 75),
+            title="Unable to re-test this quick!",
+            description=f"A player can test once every {MIN_TEST_WAIT_TIME} days in a kit, but it has been only {days_since_last_test} day(s) since {user.name} was tested in {kit}.",
+        )
+        await ctx.respond(embed=embed, ephemeral=True)
+        return
+    # Get the ranks of the player
+    prev_ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
+    formatted_kit = kit.replace(" ", "_").lower().strip()
+    prev_ranks = ""
+    try:
+        prev_rank = INT_MAP[prev_ranks[formatted_kit]]
+    except:
+        prev_rank = "None"
     # Update the database
     firebase_helper.set_rank(ctx.guild_id, user.id, kit, RANK_MAP[rank])
 
@@ -103,18 +128,20 @@ async def giverank(ctx, rank: str, kit: str, user: discord.Member, score: str):
     print(f"dbug, rank_role: {rank_role}")
     await user.add_roles(rank_role, reason="Updated user's tier testing roles.")
 
-    channel_id = 1244288786247057489  # TODO: Store in the sqlite database instead for this guild ID
+    channel_id = 1246410604584112189  # TODO: Store in the sqlite database instead for this guild ID
     channel = ctx.guild.get_channel(channel_id)
 
     # Construct an embed
     embed = discord.Embed(
         title=f"{user.name} is now {rank} in {kit}!",
         colour=rank_role.color,
-        image=user.avatar.url,
+        thumbnail=user.avatar.url,
         fields=[
+            discord.EmbedField("Previous Rank: ", prev_rank),
             discord.EmbedField("Rank:", rank),
             discord.EmbedField("Kit:", kit),
             discord.EmbedField("Awarded By: ", ctx.author.name),
+            discord.EmbedField("Region: ", region),
         ],
     )
 
@@ -125,7 +152,57 @@ async def giverank(ctx, rank: str, kit: str, user: discord.Member, score: str):
         title="Success",
         description=f"You have successfully granted {user.name} the {rank} tier in {kit}.",
     )
-    await ctx.respond(embed=embed, ephemeral=True)
+    await ctx.respond("", embed=embed, ephemeral=True)
+
+
+@bot.slash_command(
+    guild_ids=guild_ids, description="Check this server's PvP Leaderboard."
+)
+async def leaderboard(ctx):
+    # Get top 10
+    top_10 = firebase_helper.get_leaderboard(ctx.guild_id)
+    print(f"Raw top_10: {top_10}")
+    members = [ctx.guild.get_member(int(i)) for i in top_10[0]]
+    kits = [INT_MAP[max(1, i)] for i in top_10[2]]
+
+    # Create the leaderboard image
+    image = await create_leaderboard(members, top_10[1], kits)
+
+    # Create an send an embed
+    with io.BytesIO() as image_binary:
+        image.save(image_binary, "PNG")
+        image_binary.seek(0)
+        img_file = discord.File(fp=image_binary, filename="image.png")
+        embed = discord.Embed(
+            title="Server PvP Leaderboard",
+            footer=discord.EmbedFooter(
+                text="PvP Practice Bot", icon_url=bot.user.avatar.url
+            ),
+            color=discord.Colour.from_rgb(50, 127, 168),
+            description="See the **Top 10** Overall best PvPers below:",
+            image="attachment://image.png",
+        )
+        await ctx.respond(embed=embed, file=img_file)
+
+
+@bot.slash_command(
+    guild_ids=guild_ids,
+    description="Check how long since a player was tested in a kit.",
+)
+@discord.option(
+    "user",
+    discord.Member,
+)
+@discord.option("kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal"])
+async def history(ctx, user: discord.Member, kit: str):
+    days_since_last_test = firebase_helper.get_last_tested(ctx.guild_id, user.id, kit)
+    embed = discord.Embed(
+        title="Last Tested",
+        description=f"{user.name} was last tested **{days_since_last_test} day(s) ago** in {kit}.",
+        color=discord.Colour.from_rgb(75, 255, 75),
+        thumbnail=user.avatar.url,
+    )
+    await ctx.respond(embed=embed)
 
 
 @bot.slash_command(
