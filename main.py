@@ -144,6 +144,7 @@ async def giverank(
             discord.EmbedField("Kit:", kit),
             discord.EmbedField("Awarded By: ", ctx.author.name),
             discord.EmbedField("Region: ", region),
+            discord.EmbedField("Score: ", score),
         ],
     )
 
