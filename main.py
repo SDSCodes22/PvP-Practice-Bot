@@ -155,7 +155,7 @@ async def giverank(
         title="Success",
         description=f"You have successfully granted {user.name} the {rank} tier in {kit}.",
     )
-    await ctx.respond("", embed=embed, ephemeral=True)
+    await ctx.respond(embed=embed, ephemeral=True)
 
 
 @bot.slash_command(
