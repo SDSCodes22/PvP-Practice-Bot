@@ -166,7 +166,8 @@ async def leaderboard(ctx):
     top_10 = firebase_helper.get_leaderboard(ctx.guild_id)
     print(f"Raw top_10: {top_10}")
     members = [ctx.guild.get_member(int(i)) for i in top_10[0]]
-    members.remove(None)  # Removes members who aren't on the server
+    if None in members:
+        members.remove(None)  # Removes members who aren't on the server
     kits = [INT_MAP[max(1, i)] for i in top_10[2]]
 
     # Create the leaderboard image
