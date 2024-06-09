@@ -30,7 +30,7 @@ RANK_MAP = {
 INT_MAP = {v: k for k, v in RANK_MAP.items()}
 
 # Number of days before a player can test again
-MIN_TEST_WAIT_TIME = 30
+MIN_TEST_WAIT_TIME = 7
 
 
 @bot.event
@@ -69,6 +69,9 @@ async def ping(ctx):
 async def giverank(
     ctx, rank: str, kit: str, region: str, user: discord.Member, score: str
 ):
+    # Respond with a temporary message to keep the interaction valid
+    response = await ctx.respond("Working on it!", ephemeral=True)
+
     db = await initialize_tables()
     # Check if they have the tester rank
     tester_id = await get_rank_id(db, ctx.guild_id, "tester")
@@ -79,7 +82,7 @@ async def giverank(
             title="Insufficient Permissions",
             description="You must be a Tier Tester to use this command.",
         )
-        await ctx.respond(embed=embed, ephemeral=True)
+        await response.edit(embed=embed, ephemeral=True)
         return
     # Now only Tier testers
 
@@ -91,7 +94,7 @@ async def giverank(
             title="Unable to re-test this quick!",
             description=f"A player can test once every {MIN_TEST_WAIT_TIME} days in a kit, but it has been only {days_since_last_test} day(s) since {user.name} was tested in {kit}.",
         )
-        await ctx.respond(embed=embed, ephemeral=True)
+        await response.edit(embed=embed, ephemeral=True)
         return
     # Get the ranks of the player
     prev_ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
@@ -152,7 +155,7 @@ async def giverank(
         title="Success",
         description=f"You have successfully granted {user.name} the {rank} tier in {kit}.",
     )
-    await ctx.respond("", embed=embed, ephemeral=True)
+    await response.edit("", embed=embed, ephemeral=True)
 
 
 @bot.slash_command(
