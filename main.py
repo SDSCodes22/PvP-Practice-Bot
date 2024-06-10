@@ -264,7 +264,7 @@ async def configroles(
 @discord.option("user", discord.Member)
 async def ranks(ctx, user: discord.Member):
     # In case getting the ranks takes a long time, tell discord to be patient
-    await ctx.defer()
+    # await ctx.defer()
     # Just get the ranks of the current guy my god
     ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
 
