@@ -270,7 +270,7 @@ async def ranks(ctx, user: discord.Member):
 
     # Construct the embed
     embed = discord.Embed(
-        title=f" <@{user.id}> 's ranks!",
+        title=f"{user.display_name}'s ranks!",
         color=discord.Colour.from_rgb(49, 102, 63),
         thumbnail=user.avatar.url,
         fields=[
