@@ -260,4 +260,42 @@ async def configroles(
     await ctx.respond("Success!", ephemeral=True)
 
 
+@bot.slash_command(guild_ids=guild_ids, description="Check the tiers of a user!")
+@discord.option("user", discord.Member)
+async def ranks(ctx, user: discord.Member):
+    # In case getting the ranks takes a long time, tell discord to be patient
+    await ctx.defer()
+    # Just get the ranks of the current guy my god
+    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
+
+    # Construct the embed
+    embed = discord.Embed(
+        title=f" <@{user.id}> 's ranks!",
+        color=discord.Colour.from_rgb(49, 102, 63),
+        thumbnail=user.avatar.url,
+        fields=[
+            discord.EmbedField(
+                "<:chestplate:1246218083178385489> Neth Pot:",
+                INT_MAP[ranks["neth_pot"]] if ranks["neth_pot"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:sword:1246218011703246868> Sword:",
+                INT_MAP[ranks["sword"]] if ranks["sword"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:axe:1246218057370832957> Axe:",
+                INT_MAP[ranks["axe"]] if ranks["axe"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:crystal:1246218101318750318> Crystal:",
+                INT_MAP[ranks["crystal"]] if ranks["crystal"] != 0 else "Not Tested",
+            ),
+        ],
+        footer=discord.EmbedFooter(
+            text="PvP Practice Bot", icon_url=bot.user.avatar.url
+        ),
+    )
+    await ctx.respond(embed=embed)
+
+
 bot.run(TOKEN)
