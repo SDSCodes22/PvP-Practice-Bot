@@ -18,10 +18,26 @@ def create_user_if_not_exists(guild_id: int, player_id: int) -> bool:
     TEMPLATE = {
         "elo": 0,
         "ign": None,
-        "last_tested": {"axe": -1, "sword": -1, "neth_pot": -1, "crystal": -1},
+        "last_tested": {
+            "axe": -1,
+            "sword": -1,
+            "neth_pot": -1,
+            "crystal": -1,
+            "dia_pot": -1,
+            "uhc": -1,
+            "smp": -1,
+        },
         "losses": -1,
         "wins": -1,
-        "ranks": {"axe": 0, "sword": 0, "neth_pot": 0, "crystal": 0},
+        "ranks": {
+            "axe": 0,
+            "sword": 0,
+            "neth_pot": 0,
+            "crystal": 0,
+            "dia_pot": 0,
+            "uhc": 0,
+            "smp": 0,
+        },
         "highest_rank": 0,
     }
     # Check if the document exists

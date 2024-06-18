@@ -53,18 +53,15 @@ def draw_frame(i, avatar_bytes, kit: str, rank: str, name: str):
     im.paste(temp_im, (0, 0), mask_im)
 
     # ? Draw the kit img
+    # TODO: Awaiting new emojis
     img_path = ""
-    match kit:
-        case "axe":
-            img_path = join(dirname(__file__), "axe.webp")
-        case "sword":
-            img_path = join(dirname(__file__), "sword.webp")
-        case "neth_pot":
-            img_path = join(dirname(__file__), "chestplate.webp")
-        case "crystal":
-            img_path = join(dirname(__file__), "crystal.webp")
-        case _:
-            img_path = join(dirname(__file__), "crystal.webp")
+    try:
+        img_path = join(dirname(__file__), (kit + "_icon.png"))
+    except Exception as e:
+        print(
+            f"Exception while drawing icon logo in leaderboard for {name}. Probable cause corrupted rank. Icon will look incorrect. \n\n Exact Exception:\n{e}"
+        )
+        img_path = join(dirname(__file__), "axe_icon.png")
 
     kit_img = Image.open(img_path)
     kit_img.thumbnail((32, 32))
@@ -93,8 +90,8 @@ def draw_frame(i, avatar_bytes, kit: str, rank: str, name: str):
 async def create_leaderboard(
     members: list[discord.Member], highest_kits: list[str], ranks: list[str]
 ) -> Image:
-    # TODO: Implement properly
-    usernames = [member.name for member in members]
+    if not None in members:
+        usernames = [member.name for member in members]
     for i in range(len(members)):
         avatar_bytes = await members[i].avatar.read()
         draw_frame(i, avatar_bytes, highest_kits[i], ranks[i], usernames[i])

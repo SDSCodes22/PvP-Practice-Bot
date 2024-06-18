@@ -64,8 +64,10 @@ async def ping(ctx):
     "user",
     discord.Member,
 )
-@discord.option("kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal"])
-@discord.option("region", str, choices=["NA", "EU", "AS"])
+@discord.option(
+    "kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal", "Dia Pot", "UHC", "SMP"]
+)
+@discord.option("region", str, choices=["NA", "EU", "AS", "AU", "AF"])
 async def giverank(
     ctx, rank: str, kit: str, region: str, user: discord.Member, score: str
 ):
@@ -130,7 +132,7 @@ async def giverank(
     print(f"dbug, rank_role: {rank_role}")
     await user.add_roles(rank_role, reason="Updated user's tier testing roles.")
 
-    channel_id = 1246410604584112189  # TODO: Store in the sqlite database instead for this guild ID
+    channel_id = 1252421036260196352  # TODO: Store in the sqlite database instead for this guild ID
     channel = ctx.guild.get_channel(channel_id)
 
     # Construct an embed
@@ -198,7 +200,9 @@ async def leaderboard(ctx):
     "user",
     discord.Member,
 )
-@discord.option("kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal"])
+@discord.option(
+    "kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal", "UHC", "SMP", "Dia Pot"]
+)
 async def history(ctx, user: discord.Member, kit: str):
     days_since_last_test = firebase_helper.get_last_tested(ctx.guild_id, user.id, kit)
     embed = discord.Embed(
@@ -263,6 +267,7 @@ async def configroles(
 @bot.slash_command(guild_ids=guild_ids, description="Check the tiers of a user!")
 @discord.option("user", discord.Member)
 async def ranks(ctx, user: discord.Member):
+    # TODO: Awaiting New Emojis to fulfil
     # In case getting the ranks takes a long time, tell discord to be patient
     # await ctx.defer()
     # Just get the ranks of the current guy my god
@@ -275,20 +280,32 @@ async def ranks(ctx, user: discord.Member):
         thumbnail=user.avatar.url,
         fields=[
             discord.EmbedField(
-                "<:chestplate:1246218083178385489> Neth Pot:",
+                "<:neth_pot:1252741729543782441> Neth Pot:",
                 INT_MAP[ranks["neth_pot"]] if ranks["neth_pot"] != 0 else "Not Tested",
             ),
             discord.EmbedField(
-                "<:sword:1246218011703246868> Sword:",
+                "<:sword:1252741569216512113> Sword:",
                 INT_MAP[ranks["sword"]] if ranks["sword"] != 0 else "Not Tested",
             ),
             discord.EmbedField(
-                "<:axe:1246218057370832957> Axe:",
+                "<:axe:1252741528976363610> Axe:",
                 INT_MAP[ranks["axe"]] if ranks["axe"] != 0 else "Not Tested",
             ),
             discord.EmbedField(
-                "<:crystal:1246218101318750318> Crystal:",
+                "<:crystal:1252741632349179945> Crystal:",
                 INT_MAP[ranks["crystal"]] if ranks["crystal"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:dia_pot:1252741666612183122> Dia Pot:",
+                INT_MAP[ranks["dia_pot"]] if ranks["dia_pot"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:uhc:1252741833809854535> UHC:",
+                INT_MAP[ranks["uhc"]] if ranks["uhc"] != 0 else "Not Tested",
+            ),
+            discord.EmbedField(
+                "<:smp:1252741772384403528> SMP:",
+                INT_MAP[ranks["smp"]] if ranks["smp"] != 0 else "Not Tested",
             ),
         ],
         footer=discord.EmbedFooter(
