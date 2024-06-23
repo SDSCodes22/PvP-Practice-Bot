@@ -88,7 +88,9 @@ async def giverank(
     # Now only Tier testers
 
     # Check if it has been less than MIN_TEST_WAIT_TIME days
-    days_since_last_test = firebase_helper.get_last_tested(ctx.guild_id, user.id, kit)
+    days_since_last_test = firebase_helper.get_last_tested(
+        ctx.guild_id, user.id, kit, user.avatar.url
+    )
     if days_since_last_test < MIN_TEST_WAIT_TIME:
         embed = discord.Embed(
             color=discord.Color.from_rgb(255, 75, 75),
@@ -98,18 +100,20 @@ async def giverank(
         await ctx.respond(embed=embed, ephemeral=True)
         return
     # Get the ranks of the player
-    prev_ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
+    prev_ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
     formatted_kit = kit.replace(" ", "_").lower().strip()
-    prev_ranks = ""
+    prev_rank = ""
     try:
         prev_rank = INT_MAP[prev_ranks[formatted_kit]]
     except:
         prev_rank = "None"
     # Update the database
-    firebase_helper.set_rank(ctx.guild_id, user.id, kit, RANK_MAP[rank])
+    firebase_helper.set_rank(
+        ctx.guild_id, user.id, kit, RANK_MAP[rank], user.avatar.url
+    )
 
     # Get the ranks of the player
-    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
+    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
 
     # Crude way to get max rank
     max_rank = -1
@@ -164,6 +168,7 @@ async def giverank(
     guild_ids=guild_ids, description="Check this server's PvP Leaderboard."
 )
 async def leaderboard(ctx):
+    await ctx.defer()
     # Get top 10
     top_10 = firebase_helper.get_leaderboard(ctx.guild_id)
     print(f"Raw top_10: {top_10}")
@@ -204,7 +209,9 @@ async def leaderboard(ctx):
     "kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal", "UHC", "SMP", "Dia Pot"]
 )
 async def history(ctx, user: discord.Member, kit: str):
-    days_since_last_test = firebase_helper.get_last_tested(ctx.guild_id, user.id, kit)
+    days_since_last_test = firebase_helper.get_last_tested(
+        ctx.guild_id, user.id, kit, user.avatar.url
+    )
     embed = discord.Embed(
         title="Last Tested",
         description=f"{user.name} was last tested **{days_since_last_test} day(s) ago** in {kit}.",
@@ -271,7 +278,7 @@ async def ranks(ctx, user: discord.Member):
     # In case getting the ranks takes a long time, tell discord to be patient
     # await ctx.defer()
     # Just get the ranks of the current guy my god
-    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id)
+    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
 
     # Construct the embed
     embed = discord.Embed(

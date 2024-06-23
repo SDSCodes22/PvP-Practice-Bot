@@ -9,7 +9,7 @@ app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
-def create_user_if_not_exists(guild_id: int, player_id: int) -> bool:
+def create_user_if_not_exists(guild_id: int, player_id: int, avatar_url: str) -> bool:
     """
     Creates a new document with a blank template for a new user.
     Returns true if a document was made, returns false if not
@@ -18,6 +18,7 @@ def create_user_if_not_exists(guild_id: int, player_id: int) -> bool:
     TEMPLATE = {
         "elo": 0,
         "ign": None,
+        "avatar_url": avatar_url,
         "last_tested": {
             "axe": -1,
             "sword": -1,
@@ -50,13 +51,13 @@ def create_user_if_not_exists(guild_id: int, player_id: int) -> bool:
         return False
 
 
-def get_ranks(guild_id: int, player_id: int) -> dict:
+def get_ranks(guild_id: int, player_id: int, avatar_url: str) -> dict:
     """
     Get's the player's ranks, in a dict format where the key is the kit,
     in snake case, while the pair is the rank, where 0 is lt5 and 10 is ht1
     """
     # Check if the document exists
-    create_user_if_not_exists(guild_id, player_id)
+    create_user_if_not_exists(guild_id, player_id, avatar_url)
 
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     doc = doc_ref.get()
@@ -64,13 +65,13 @@ def get_ranks(guild_id: int, player_id: int) -> dict:
     return doc.to_dict()["ranks"]
 
 
-def set_rank(guild_id: int, player_id: int, kit: str, tier: int):
+def set_rank(guild_id: int, player_id: int, kit: str, tier: int, avatar_url):
     """
     Given a kit and a tier, it will update the database such that the player has this
     rank.
     """
     # Check if the document exists
-    create_user_if_not_exists(guild_id, player_id)
+    create_user_if_not_exists(guild_id, player_id, avatar_url)
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
 
     formatted_kit = kit.replace(" ", "_").lower().strip()
@@ -81,7 +82,7 @@ def set_rank(guild_id: int, player_id: int, kit: str, tier: int):
     set_highest_rank(guild_id, player_id)
 
 
-def get_last_tested(guild_id: int, player_id: int, kit: str) -> int:
+def get_last_tested(guild_id: int, player_id: int, kit: str, avatar_url: str) -> int:
     """
     Get the number, in days, since a player was tested in a given kit.
     """
@@ -99,8 +100,8 @@ def get_last_tested(guild_id: int, player_id: int, kit: str) -> int:
     return total_time
 
 
-def set_highest_rank(guild_id: int, player_id: int):
-    create_user_if_not_exists(guild_id, player_id)
+def set_highest_rank(guild_id: int, player_id: int, avatar_url: str):
+    create_user_if_not_exists(guild_id, player_id, avatar_url)
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     doc = doc_ref.get()
     doc = doc.to_dict()
@@ -112,8 +113,8 @@ def set_highest_rank(guild_id: int, player_id: int):
     doc_ref.update({"highest_rank": m})
 
 
-def get_highest_rank(guild_id: int, player_id: int):
-    create_user_if_not_exists(guild_id, player_id)
+def get_highest_rank(guild_id: int, player_id: int, avatar_url: str):
+    create_user_if_not_exists(guild_id, player_id, avatar_url)
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     doc = doc_ref.get()
     doc = doc.to_dict()
@@ -131,9 +132,7 @@ def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
     kits = []
     ranks = []
     coll_ref = db.collection(str(guild_id))
-    query = coll_ref.order_by(
-        "highest_rank", direction=firestore.Query.DESCENDING
-    ).limit(10)
+    query = coll_ref.order_by("elo", direction=firestore.Query.DESCENDING).limit(10)
     results = query.get()
     print(f"Got query results!")
     for i in results:
