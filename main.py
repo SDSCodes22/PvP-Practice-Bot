@@ -69,38 +69,77 @@ async def ping(ctx):
 )
 @discord.option("region", str, choices=["NA", "EU", "AS", "AU", "AF"])
 async def giverank(
-    ctx, rank: str, kit: str, region: str, user: discord.Member, score: str
+    ctx,
+    rank: str,
+    kit: str,
+    region: str,
+    user: discord.Member,
+    score: str,
+    bypass: bool = False,
 ):
-    # This takes a while to respond, so let's tell discord to be patient
-    await ctx.defer(ephemeral=True)
-    db = await initialize_tables()
-    # Check if they have the tester rank
-    tester_id = await get_rank_id(db, ctx.guild_id, "tester")
-    tester_role = ctx.guild.get_role(tester_id)
-    if not tester_role in ctx.author.roles:
-        embed = discord.Embed(
-            color=discord.Color.from_rgb(255, 75, 75),
-            title="Insufficient Permissions",
-            description="You must be a Tier Tester to use this command.",
-        )
-        await ctx.respond(embed=embed, ephemeral=True)
-        return
-    # Now only Tier testers
+    # Only let admins bypass, if not an admin and bypass, then don't do anything
+    if bypass:
+        db = await initialize_tables()
+        # Check if they have the tester rank
+        admin_id = await get_rank_id(db, ctx.guild_id, "admin")
+        admin_role = ctx.guild.get_role(admin_id)
+        if not admin_role in ctx.author.roles:
+            embed = discord.Embed(
+                color=discord.Color.from_rgb(255, 75, 75),
+                title="Insufficient Permissions To Use option Bypass",
+                description="Bypass argument removes all restrictions from giving a role. Only staff members can set this to true.",
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+    else:
+        # We're not bypassing so check the following before doing anything
+        # 1. Is this person a tester
+        # 2. Is the tested person actually allowed to be re-tested
+        # 3. Is the tester allowed to give this high of a tier
+        db = await initialize_tables()
+        # Check if they have the tester rank
+        tester_id = await get_rank_id(db, ctx.guild_id, "tester")
+        tester_role = ctx.guild.get_role(tester_id)
+        if not tester_role in ctx.author.roles:
+            embed = discord.Embed(
+                color=discord.Color.from_rgb(255, 75, 75),
+                title="Insufficient Permissions",
+                description="You must be a Tier Tester to use this command.",
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+        # Now only Tier testers
 
-    # Check if it has been less than MIN_TEST_WAIT_TIME days
-    days_since_last_test = firebase_helper.get_last_tested(
-        ctx.guild_id, user.id, kit, user.avatar.url
-    )
-    if days_since_last_test < MIN_TEST_WAIT_TIME:
-        embed = discord.Embed(
-            color=discord.Color.from_rgb(255, 75, 75),
-            title="Unable to re-test this quick!",
-            description=f"A player can test once every {MIN_TEST_WAIT_TIME} days in a kit, but it has been only {days_since_last_test} day(s) since {user.name} was tested in {kit}.",
+        # Check if it has been less than MIN_TEST_WAIT_TIME days
+        days_since_last_test = firebase_helper.get_last_tested(
+            ctx.guild_id, user.id, kit, user.avatar.url, user.name
         )
-        await ctx.respond(embed=embed, ephemeral=True)
-        return
+        if days_since_last_test < MIN_TEST_WAIT_TIME:
+            embed = discord.Embed(
+                color=discord.Color.from_rgb(255, 75, 75),
+                title="Unable to re-test this quick!",
+                description=f"A player can test once every {MIN_TEST_WAIT_TIME} days in a kit, but it has been only {days_since_last_test} day(s) since {user.name} was tested in {kit}.",
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+
+        # Check if the tester is allowed to give this rank
+        testers_ranks = firebase_helper.get_ranks(
+            ctx.guild_id, ctx.author.id, ctx.author.avatar.url, ctx.author.display_name
+        )
+        formatted_kit = kit.lower().strip().replace(" ", "_")
+        if testers_ranks[formatted_kit] < RANK_MAP[rank]:
+            embed = discord.Embed(
+                color=discord.Color.from_rgb(255, 75, 75),
+                title="You are not allowed to award this rank.",
+                description=f"You are only allowed to award a player a maximum of the same rank as you in this kit. You cannot grant them a rank higher than you.\n Contact a <@&1252507321968365568> for help.",
+            )
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
     # Get the ranks of the player
-    prev_ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
+    prev_ranks = firebase_helper.get_ranks(
+        ctx.guild_id, user.id, user.avatar.url, user.name
+    )
     formatted_kit = kit.replace(" ", "_").lower().strip()
     prev_rank = ""
     try:
@@ -109,11 +148,11 @@ async def giverank(
         prev_rank = "None"
     # Update the database
     firebase_helper.set_rank(
-        ctx.guild_id, user.id, kit, RANK_MAP[rank], user.avatar.url
+        ctx.guild_id, user.id, kit, RANK_MAP[rank], user.avatar.url, user.name
     )
 
     # Get the ranks of the player
-    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
+    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url, user.name)
 
     # Crude way to get max rank
     max_rank = -1
@@ -210,7 +249,7 @@ async def leaderboard(ctx):
 )
 async def history(ctx, user: discord.Member, kit: str):
     days_since_last_test = firebase_helper.get_last_tested(
-        ctx.guild_id, user.id, kit, user.avatar.url
+        ctx.guild_id, user.id, kit, user.avatar.url, user.name
     )
     embed = discord.Embed(
         title="Last Tested",
@@ -274,11 +313,10 @@ async def configroles(
 @bot.slash_command(guild_ids=guild_ids, description="Check the tiers of a user!")
 @discord.option("user", discord.Member)
 async def ranks(ctx, user: discord.Member):
-    # TODO: Awaiting New Emojis to fulfil
     # In case getting the ranks takes a long time, tell discord to be patient
     # await ctx.defer()
     # Just get the ranks of the current guy my god
-    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url)
+    ranks = firebase_helper.get_ranks(ctx.guild_id, user.id, user.avatar.url, user.name)
 
     # Construct the embed
     embed = discord.Embed(
@@ -320,6 +358,64 @@ async def ranks(ctx, user: discord.Member):
         ),
     )
     await ctx.respond(embed=embed)
+
+
+@bot.slash_command(
+    guild_ids=guild_ids,
+    description="Check the ELO of a player. (Or just go to the website)",
+)
+@discord.option("user", discord.Member)
+async def elo(ctx, user: discord.Member):
+    await ctx.defer()
+    elo = firebase_helper.get_elo(ctx.guild_id, user.id, user.avatar.url, user.name)
+
+    embed = discord.Embed(
+        color=0x3477EB,
+        thumbnail=user.avatar.url,
+        title=f"ELO of {user.display_name}",
+        fields=[discord.EmbedField("ELO:", str(elo))],
+    )
+    await ctx.respond(embed=embed)
+
+
+@bot.slash_command(
+    guild_ids=guild_ids,
+    description="[TESTER ONLY!] Remove history and tier for a user in the specified kit.",
+)
+@discord.option("user", discord.Member)
+@discord.option(
+    "kit", str, choices=["Neth Pot", "Sword", "Axe", "Crystal", "UHC", "SMP", "Dia Pot"]
+)
+async def removerank(ctx, user: discord.Member, kit: str):
+    # This takes a while to respond, so let's tell discord to be patient
+    await ctx.defer(ephemeral=True)
+    db = await initialize_tables()
+    # Check if they have the tester rank
+    tester_id = await get_rank_id(db, ctx.guild_id, "tester")
+    tester_role = ctx.guild.get_role(tester_id)
+    if not tester_role in ctx.author.roles:
+        embed = discord.Embed(
+            color=discord.Color.from_rgb(255, 75, 75),
+            title="Insufficient Permissions",
+            description="You must be a Tier Tester to use this command.",
+        )
+        await ctx.respond(embed=embed, ephemeral=True)
+        return
+    # Now only Tier testers
+
+    # Remove the rank
+    firebase_helper.remove_rank(ctx.guild_id, user.id, kit, user.avatar.url, user.name)
+
+    # Give response to testers
+    embed = discord.Embed(
+        title=f"Removed {user.display_name}'s tier and history",
+        colour=0x33FF33,
+        thumbnail=user.avatar.url,
+        description=f"Removed ALL History, and ranks for {user.display_name} in {kit}",
+        footer=discord.EmbedFooter("PvP Practice Bot", bot.user.avatar.url),
+    )
+
+    await ctx.respond(embed=embed, ephemeral=True)
 
 
 bot.run(TOKEN)
