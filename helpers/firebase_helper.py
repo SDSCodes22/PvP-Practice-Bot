@@ -4,7 +4,7 @@ from os.path import join, dirname
 import time
 
 # init firestore
-cred = credentials.Certificate(join(dirname(__file__), "service_account.json"))
+cred = credentials.Certificate(join(dirname(dirname(__file__)), "service_account.json"))
 app = firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -64,7 +64,7 @@ def get_ranks(guild_id: int, player_id: int, avatar_url: str, name: str) -> dict
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     doc = doc_ref.get()
 
-    return doc.to_dict()["ranks"]
+    return doc.to_dict()["ranks"]  # type: ignore
 
 
 def set_rank(
@@ -98,7 +98,7 @@ def update_elo(guild_id: int, player_id: int):
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
 
     data = doc_ref.get().to_dict()
-    ranks = data["ranks"]
+    ranks = data["ranks"]  # type: ignore
 
     total_elo = 0
     for k, v in ranks.items():
@@ -115,7 +115,7 @@ def get_elo(guild_id: int, player_id: int, avatar_url: str, name: str) -> int:
     create_user_if_not_exists(guild_id, player_id, avatar_url, name)
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     data = doc_ref.get().to_dict()
-    elo = data["elo"]
+    elo = data["elo"]  # type: ignore
     return int(elo)
 
 
@@ -151,7 +151,7 @@ def get_last_tested(
     formatted_kit = kit.replace(" ", "_").lower().strip()
     doc = doc_ref.get()
     doc = doc.to_dict()
-    last_time = doc["last_tested"][formatted_kit]
+    last_time = doc["last_tested"][formatted_kit]  # type: ignore
     total_time = time.time() - last_time
     total_time = total_time // 90000  # Convert from seconds to days
     return total_time
@@ -164,7 +164,7 @@ def set_highest_rank(guild_id: int, player_id: int, avatar_url: str, name: str):
     doc = doc.to_dict()
 
     m = 0
-    for i in doc["ranks"].values():
+    for i in doc["ranks"].values():  # type: ignore
         m = max(m, i)
 
     doc_ref.update({"highest_rank": m})
@@ -175,7 +175,7 @@ def get_highest_rank(guild_id: int, player_id: int, avatar_url: str, name: str):
     doc_ref = db.collection(str(guild_id)).document(str(player_id))
     doc = doc_ref.get()
     doc = doc.to_dict()
-    return doc["highest_rank"]
+    return doc["highest_rank"]  # type: ignore
 
 
 def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
@@ -189,7 +189,7 @@ def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
     kits = []
     ranks = []
     coll_ref = db.collection(str(guild_id))
-    query = coll_ref.order_by("elo", direction=firestore.Query.DESCENDING).limit(10)
+    query = coll_ref.order_by("elo", direction=firestore.Query.DESCENDING).limit(10)  # type: ignore
     results = query.get()
     print(f"Got query results!")
     for i in results:
@@ -200,13 +200,13 @@ def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
         # Get the kit
         kit = ""
         m = 0
-        for k, v in data["ranks"].items():
+        for k, v in data["ranks"].items():  # type: ignore
             if v > m:
                 kit = k
                 m = v
-        rank = data["highest_rank"]
+        rank = data["highest_rank"]  # type: ignore
 
         ids.append(id)
         kits.append(kit)
         ranks.append(rank)
-    return (ids, kits, ranks)
+    return (ids, kits, ranks)  # type: ignore
