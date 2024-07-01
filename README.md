@@ -61,6 +61,8 @@ From there, rankings are simply ordered, ELO descending.
 
 ## Local Setup
 
+**Make sure you have python 3.11 installed on your system**
+
 **1.** Clone the project
 
 ```bash
@@ -127,3 +129,15 @@ PvP Practice Bot
 - A role for each tier, from LT5 all the way to HT1
 
 **3.** Go to `Discord Developer Portal -> Applications -> your Bot -> Bot -> Privileged Gateway Intents -> Enable "Server Members"`
+
+## Starting the Bot
+
+**On a local machine**
+
+```bash
+python main.py
+```
+
+**On a Pterodactyl server**:
+
+Make sure that, if set, the main file is changed from `app.py` to `main.py`
