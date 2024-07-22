@@ -61,6 +61,7 @@ class Ranks(commands.Cog):
         score: str,
         bypass: bool = False,
     ):
+        await ctx.defer(ephemeral=True)
         allowed: bool = await self._handle_allowed_to_give_rank(
             ctx, user, rank, kit, bypass
         )
