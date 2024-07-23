@@ -23,7 +23,14 @@ async def on_ready():
     print(f"Logged in as {bot.user} successfully!")
 
 
-cogs_list = ["config_cog", "info_cog", "ranks_cog", "stats_cog", "ticketing_cog"]
+cogs_list = [
+    "config_cog",
+    "info_cog",
+    "ranks_cog",
+    "stats_cog",
+    "ticketing_cog",
+    "tester_cog",
+]
 
 for cog in cogs_list:
     bot.load_extension(f"cogs.{cog}")

@@ -1,6 +1,7 @@
 from helpers import firebase_helper, config_helper
 import discord
 from discord.ext import commands
+from loguru import logger as log
 import time
 
 
@@ -138,6 +139,41 @@ class Ticketing(commands.Cog):
         )
 
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(description="See the current queue in this kit.")
+    @discord.option(
+        "kit",
+        str,
+        choices=["Sword", "Axe", "Neth Pot", "Dia Pot", "SMP", "UHC", "Crystal"],
+    )
+    async def queue(self, ctx, kit: str):
+        # Get the queue
+        queue = firebase_helper.get_queue(kit)
+        position = firebase_helper.get_queue_position(ctx.author.id, kit)
+        fields = []
+        for i, x in enumerate(queue):
+            # Get the member
+            member = ctx.guild.get_member(x)
+            log.debug(f"Member is none? {member == None}\ni: {i}\tx: {x}")
+            fields.append(discord.EmbedField(f"Position {i+1}:", member.display_name))
+
+        # Add a cute little thumbnail
+        formatted_kit = kit.replace(" ", "_").lower().strip()
+        img_path = f"assets/{formatted_kit}_icon.png"
+        file = discord.File(img_path, filename="thumbnail.png")
+
+        embed = discord.Embed(
+            title=f"Queue for {kit}",
+            description=(
+                f"**You are in position {position} of this queue.**"
+                if position != 0
+                else "**You are not in this queue.**"
+            ),
+            fields=fields,
+            color=0x6699FF,
+        )
+        embed.set_thumbnail(url="attachment://thumbnail.png")
+        await ctx.respond(embed=embed, file=file)
 
     async def _create_ticket(
         self,

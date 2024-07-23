@@ -5,8 +5,10 @@ from os.path import join, dirname
 import time
 import discord
 from typing import Any
+from google.cloud.firestore_v1.base_document import DocumentSnapshot
 from google.cloud.firestore_v1.client import Client
 from google.cloud.firestore_v1 import FieldFilter
+from google.cloud.firestore_v1.document import DocumentReference
 from loguru import logger as log
 
 # init firestore
@@ -354,3 +356,65 @@ def get_queue(kit: str) -> list[int]:
         if items != None:
             output.append(int(items["userId"]))
     return output
+
+
+#           TESTERS
+def add_tester(user: discord.Member, kits_testing: list[bool]) -> bool:
+    """Adds a tester to the Firestore Database
+
+    Args:
+        user (discord.Member): The user who will be added as a tester
+        kits_testing (tuple[bool]): A "checkbox" of each kit, where the tuple's length must be 7. MUST BE IN THIS ORDER: ["sword", "axe", "dia_pot", "neth_pot", "crystal", "uhc", "smp"]
+
+    Returns:
+        bool: True if a tester was added, False if that tester already exists.
+    Raises:
+        ValueError: If the length of kits_testing is NOT equal to 7
+    """
+    if len(kits_testing) != 7:
+        raise ValueError(
+            f"Expected kits_testing to be of length 7, got length {len(kits_testing)}"
+        )
+    doc_ref: DocumentReference = db.collection("testers").document(str(user.id))
+
+    # Get a list of the kits as strings that the tester tests in
+    all_kits = ["sword", "axe", "dia_pot", "neth_pot", "crystal", "uhc", "smp"]
+
+    kits_tested = [i for i, u in zip(all_kits, kits_testing) if u]
+    log.debug(f"Kits tested: {kits_tested}")
+
+    template = {
+        "completed_tests": 0,
+        "userId": user.id,
+        "activeTests": 0,
+        "amountActive": 0,
+        "isActive": False,
+        "kits": kits_tested,
+        "tickets": {
+            "sword": "0",
+            "axe": "0",
+            "dia_pot": "0",
+            "neth_pot": "0",
+            "crystal": "0",
+            "uhc": "0",
+            "smp": "0",
+        },
+    }
+
+    # Check if it exists, if it does, return False, if not add the template and return true
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        return False
+    else:
+        doc_ref.set(template)
+        return True
+
+
+def get_tester(id: int) -> dict | None:
+    doc_ref: DocumentReference = db.collection("testers").document(str(id))
+    doc_snap: DocumentSnapshot = doc_ref.get()
+
+    if doc_snap.exists:
+        return doc_snap.to_dict()
+    else:
+        return None
