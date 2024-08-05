@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Literal
 import firebase_admin
 from firebase_admin import firestore, credentials
 from os.path import join, dirname
@@ -358,9 +358,73 @@ def get_queue(kit: str) -> list[int]:
     return output
 
 
+def send_to_end_of_queue(kit: str, user_id: int) -> Literal[0] | Literal[1]:
+    """Send a person to the end of the queue (by setting their time requested to the current time)
+
+    Args:
+        kit (str): The kit they wish to be tested in, unformatted
+        user_id (int): The user ID of the person who requested the tier test
+
+    Returns:
+        Literal[0] | Literal[1]: 0 if success, 1 if the doc doesn't exist
+    """
+    kit = kit.strip().lower().replace(" ", "_")
+    doc_ref = db.collection("tests").document(f"{kit}{user_id}")
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        doc_ref.update({"time_requested": time.time()})
+        return 0
+    log.warning(
+        f"Ticket Document does not exist! Unable to send to the end of the queue. {kit}{user_id}"
+    )
+    return 1
+
+
+def set_test_channel_id(
+    kit: str, user_id: int, channel_id: int
+) -> Literal[0] | Literal[1]:
+    """Set the Discord Channel ID of an opened ticket. ID of 0 = no ticket opened aka. still in queue
+    NOTE: The channel ID is saved as a STRING
+    Args:
+        kit (str): _description_
+        user_id (int): _description_
+        channel_id (int): _description_
+
+    Returns:
+        Literal[0] | Literal[1]: _description_
+    """
+    kit = kit.strip().lower().replace(" ", "_")
+    doc_ref = db.collection("tests").document(f"{kit}{user_id}")
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        doc_ref.update({"channel_id": str(channel_id)})
+        return 0
+    log.warning(
+        f"Ticket Document does not exist! Unable to set channel ID. {kit}{user_id}"
+    )
+    return 1
+
+
 #           TESTERS
 def add_tester(user: discord.Member, kits_testing: list[bool]) -> bool:
     """Adds a tester to the Firestore Database
+    {
+        "completed_tests": 0,
+        "userId": user.id,
+        "activeTests": 0,
+        "amountActive": 0,
+        "isActive": False,
+        "ticket_channel": "0",
+        "kits": kits_tested,
+        "tickets": {
+            "sword": "0",
+            "axe": "0",
+            "dia_pot": "0",
+            "neth_pot": "0",
+            "crystal": "0",
+            "uhc": "0",
+            "smp": "0",
+    }
 
     Args:
         user (discord.Member): The user who will be added as a tester
@@ -390,6 +454,7 @@ def add_tester(user: discord.Member, kits_testing: list[bool]) -> bool:
         "amountActive": 0,
         "isActive": False,
         "kits": kits_tested,
+        "ticket_channel": "0",
         "tickets": {
             "sword": "0",
             "axe": "0",
@@ -411,6 +476,30 @@ def add_tester(user: discord.Member, kits_testing: list[bool]) -> bool:
 
 
 def get_tester(id: int) -> dict | None:
+    """Get the firestore document as a dict of a tester. The format is similar to this:
+    {
+        "completed_tests": 0,
+        "userId": user.id,
+        "activeTests": 0,
+        "amountActive": 0,
+        "isActive": False,
+        "kits": kits_tested,
+        "tickets": {
+            "sword": "0",
+            "axe": "0",
+            "dia_pot": "0",
+            "neth_pot": "0",
+            "crystal": "0",
+            "uhc": "0",
+            "smp": "0",
+    }
+
+    Args:
+        id (int): The tester ID to check for
+
+    Returns:
+        dict | None: The document of the tester in the format above, or None if the tester is not in the database.
+    """
     doc_ref: DocumentReference = db.collection("testers").document(str(id))
     doc_snap: DocumentSnapshot = doc_ref.get()
 
@@ -418,3 +507,44 @@ def get_tester(id: int) -> dict | None:
         return doc_snap.to_dict()
     else:
         return None
+
+
+def has_test(id: int, kit: str) -> bool:
+    """Check if a tester has a test in a given kit
+
+    Args:
+        id (int): The tester's user ID
+        kit (str): The kit to check for
+
+    Returns:
+        bool: whether the tester has a test ongoing in this kit or not
+    """
+    doc = get_tester(id)
+    formatted_kit = (" ".join(kit.split())).replace(" ", "_").lower()
+    return doc["tickets"][formatted_kit] != "0" if doc != None else False
+
+
+def set_test(tester_id: int, kit: str, ticket_id: int) -> Literal[0] | Literal[1]:
+    """Use this to set a reference to the ticket which the tester is testing in a kit
+
+    Args:
+        tester_id (int): The tester who is taking this testing request / ticket
+        kit (str): The kit that is being tested
+        ticket_id (int): This is the user ID of the testee
+
+    Returns:
+        Literal[0] | Literal[1]: 0 = Execution successful, 1 = Execution unsuccessful
+    """
+    doc_ref: DocumentReference = db.collection("testers").document(str(tester_id))
+    formatted_kit = kit.replace(" ", "_").lower().strip()
+    changes = {f"tickets.{formatted_kit}": ticket_id}
+
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        doc_ref.update(changes)
+        return 0
+    else:
+        log.warning(
+            f"Tester with ID {tester_id} does not have a document. Unable to set test."
+        )
+        return 1

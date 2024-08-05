@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from jax import config
 from helpers import config_helper
 
 
@@ -35,6 +34,8 @@ class Config(commands.Cog):
         ht2: discord.Role,
         lt1: discord.Role,
         ht1: discord.Role,
+        online: discord.Role,
+        offline: discord.Role,
     ):
 
         config_helper.configure_roles(
@@ -51,6 +52,8 @@ class Config(commands.Cog):
             ht2.id,
             lt1.id,
             ht1.id,
+            online.id,
+            offline.id,
         )
 
         await ctx.respond("Updated roles for bot successfully!", ephemeral=True)
@@ -68,6 +71,26 @@ class Config(commands.Cog):
     async def cooldown(self, ctx, days: int):
         config_helper.set_test_cooldown(days)
         await ctx.respond(f"Successfully set the test cooldown to {days} day(s)")
+
+    @config_group.command(
+        description="Set the different categories to create tickets under"
+    )
+    @commands.has_permissions(administrator=True)
+    async def categories(
+        self,
+        ctx,
+        sword: discord.CategoryChannel,
+        axe: discord.CategoryChannel,
+        dia_pot: discord.CategoryChannel,
+        neth_pot: discord.CategoryChannel,
+        crystal: discord.CategoryChannel,
+        smp: discord.CategoryChannel,
+        uhc: discord.CategoryChannel,
+    ):
+        config_helper.configureCategories(
+            sword.id, axe.id, neth_pot.id, dia_pot.id, crystal.id, uhc.id, smp.id
+        )
+        await ctx.respond("Sucessfully set the categories for creating tickets")
 
 
 def setup(bot):  # this is called by Pycord to setup the cog

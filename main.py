@@ -28,7 +28,7 @@ cogs_list = [
     "info_cog",
     "ranks_cog",
     "stats_cog",
-    "ticketing_cog",
+    "request_test_cog",
     "tester_cog",
 ]
 

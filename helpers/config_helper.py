@@ -10,6 +10,8 @@ def get_rank_role_id(role: str) -> int:
         -`tester`\n
         -`manager`\n
         -`LT5 to HT1`
+        -online
+        -offline
     """
     config_path: str = join(dirname(dirname(__file__)), "config.json")
     role_id: int = -1
@@ -109,6 +111,8 @@ def configure_roles(
     ht2: int,
     lt1: int,
     ht1: int,
+    online: int,
+    offline: int,
 ):
     role_ids = {
         "admin": admin,
@@ -124,6 +128,8 @@ def configure_roles(
         "HT2": ht2,
         "LT1": lt1,
         "HT1": ht1,
+        "online": online,
+        "offline": offline,
     }
     config_path: str = join(dirname(dirname(__file__)), "config.json")
     with open(config_path, "r") as config_file:
@@ -132,6 +138,33 @@ def configure_roles(
     raw_json["role_ids"] = role_ids
     with open(config_path, "w") as config_file:
         json.dump(raw_json, config_file)
+
+
+def configureCategories(
+    sword: int, axe: int, neth_pot: int, dia_pot: int, crystal: int, uhc: int, smp: int
+):
+    category_ids = {
+        "sword": sword,
+        "axe": axe,
+        "neth_pot": neth_pot,
+        "dia_pot": dia_pot,
+        "crystal": crystal,
+        "uhc": uhc,
+        "smp": smp,
+    }
+    config_path: str = join(dirname(dirname(__file__)), "config.json")
+    with open(config_path, "r") as config_file:
+        raw_json: dict = json.loads(config_file.read())
+    raw_json["ticket_categories"] = category_ids
+    with open(config_path, "w") as config_file:
+        json.dump(raw_json, config_file)
+
+
+def getCategories():
+    config_path: str = join(dirname(dirname(__file__)), "config.json")
+    with open(config_path, "r") as config_file:
+        raw_json: dict = json.loads(config_file.read())
+    return raw_json["ticket_categories"]
 
 
 if __name__ == "__main__":
