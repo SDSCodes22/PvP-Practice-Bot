@@ -29,6 +29,7 @@ class TesterManagement(commands.Cog):
         tests_uhc: bool,
         tests_smp: bool,
     ) -> None:
+        await ctx.defer()
         # Add the tester
         tester_added = firebase_helper.add_tester(
             user,

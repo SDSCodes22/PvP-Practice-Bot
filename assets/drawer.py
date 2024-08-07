@@ -88,12 +88,13 @@ def draw_frame(i, avatar_bytes, kit: str, rank: str, name: str):
 
 
 async def create_leaderboard(
-    members: list[discord.Member], highest_kits: list[str], ranks: list[str]
-) -> Image:
-    if not None in members:
-        usernames = [member.name for member in members]
-    for i in range(len(members)):
-        avatar_bytes = await members[i].avatar.read()
+    members: list[discord.Member | None], highest_kits: list[str], ranks: list[str]
+) -> Image:  # type: ignore NO
+    # Lot of issues cuz
+    usernames = [member.name for member in members if member != None]
+    members = [member for member in members if member != None]
+    for i in range(len(usernames)):
+        avatar_bytes = await members[i].avatar.read()  # type: ignore falsly showing that avatar could be None
         draw_frame(i, avatar_bytes, highest_kits[i], ranks[i], usernames[i])
     print("Done!")
-    return im
+    return im  # type: ignore IDK about this type check ok?

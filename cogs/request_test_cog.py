@@ -28,6 +28,7 @@ class RequestTest(commands.Cog):
     async def request(
         self, ctx, kit: str, region: str, officially_tested: str, cracked: str
     ):
+        await ctx.defer()
         yn_map = {"Yes": True, "No": False}
         official_tested = yn_map[officially_tested]
         isCracked = yn_map[cracked]
@@ -82,6 +83,7 @@ class RequestTest(commands.Cog):
         choices=["Sword", "Axe", "Neth Pot", "Dia Pot", "SMP", "UHC", "Crystal"],
     )
     async def info(self, ctx, kit: str):
+        await ctx.defer()
         test_info = firebase_helper.get_test_info(ctx.author.id, kit)
         if test_info == None:
             embed = discord.Embed(
@@ -121,6 +123,7 @@ class RequestTest(commands.Cog):
         choices=["Sword", "Axe", "Neth Pot", "Dia Pot", "SMP", "UHC", "Crystal"],
     )
     async def queue(self, ctx, kit: str):
+        await ctx.defer()
         # Get the queue
         queue = firebase_helper.get_queue(kit)
         position = firebase_helper.get_queue_position(ctx.author.id, kit)

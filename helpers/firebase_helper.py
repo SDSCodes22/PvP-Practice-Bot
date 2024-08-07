@@ -180,7 +180,7 @@ def get_highest_rank(guild_id: int, player_id: int, avatar_url: str, name: str):
 
 def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
     """
-    Gets the following details about the top 10 players in the guild:
+    Gets the following details about the top 20 players in the guild:
     -discord id
     -highest kit
     -highest rank
@@ -189,12 +189,12 @@ def get_leaderboard(guild_id: int) -> tuple[int, str, str]:
     kits = []
     ranks = []
     coll_ref = db.collection(str(guild_id))
-    query = coll_ref.order_by("elo", direction=firestore.Query.DESCENDING).limit(10)  # type: ignore
+    query = coll_ref.order_by("elo", direction=firestore.Query.DESCENDING).limit(20)  # type: ignore
     results = query.get()
     print(f"Got query results!")
     for i in results:
         data = i
-        print(f"Top 10 Raw Data: {data}")
+        print(f"Top 20 Raw Data: {data}")
         id = i.id
         data = data.to_dict()
         # Get the kit
@@ -288,6 +288,18 @@ def get_test_info(user_id: int, kit: str) -> Dict[str, Any] | None:
     if doc_snap.exists:
         return doc_snap.to_dict()
     return None
+
+
+def delete_test(user_id: int, kit: str):
+    """Deletes a test document. Use when a test has concluded
+
+    Args:
+        user_id (int): User ID who requested the test
+        kit (str): Unformatted (or optionally formatted) kit that the test is for, eg. Neth Pot, Dia Pot
+    """
+    formatted_kit = kit.replace(" ", "_").lower().strip()
+    doc_ref = db.collection("tests").document(formatted_kit + str(user_id))
+    doc_ref.delete()
 
 
 #           QUEUE
@@ -537,7 +549,7 @@ def set_test(tester_id: int, kit: str, ticket_id: int) -> Literal[0] | Literal[1
     """
     doc_ref: DocumentReference = db.collection("testers").document(str(tester_id))
     formatted_kit = kit.replace(" ", "_").lower().strip()
-    changes = {f"tickets.{formatted_kit}": ticket_id}
+    changes = {f"tickets.{formatted_kit}": str(ticket_id)}
 
     doc_snap = doc_ref.get()
     if doc_snap.exists:
@@ -546,5 +558,40 @@ def set_test(tester_id: int, kit: str, ticket_id: int) -> Literal[0] | Literal[1
     else:
         log.warning(
             f"Tester with ID {tester_id} does not have a document. Unable to set test."
+        )
+        return 1
+
+
+def set_tester_active(tester_id: int):
+    doc_ref: DocumentReference = db.collection("testers").document(str(tester_id))
+    changes = {
+        f"isActive": True,
+        "amountActive": firestore.Increment(1),  # type: ignore
+    }
+
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        doc_ref.update(changes)
+        return 0
+    else:
+        log.warning(
+            f"Tester with ID {tester_id} does not have a document. Unable to set activity."
+        )
+        return 1
+
+
+def set_tester_inactive(tester_id: int):
+    doc_ref: DocumentReference = db.collection("testers").document(str(tester_id))
+    changes = {
+        f"isActive": False,
+    }
+
+    doc_snap = doc_ref.get()
+    if doc_snap.exists:
+        doc_ref.update(changes)
+        return 0
+    else:
+        log.warning(
+            f"Tester with ID {tester_id} does not have a document. Unable to set activity."
         )
         return 1

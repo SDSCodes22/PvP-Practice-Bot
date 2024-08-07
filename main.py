@@ -30,6 +30,7 @@ cogs_list = [
     "stats_cog",
     "request_test_cog",
     "tester_cog",
+    "embed_sender_cog",
 ]
 
 for cog in cogs_list:

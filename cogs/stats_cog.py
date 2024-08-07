@@ -108,16 +108,16 @@ class Stats(commands.Cog):
     @commands.slash_command(description="Check this server's PvP Leaderboard.")
     async def leaderboard(self, ctx):
         await ctx.defer()
-        # Get top 10
-        top_10 = firebase_helper.get_leaderboard(ctx.guild_id)
-        print(f"Raw top_10: {top_10}")
-        members = [ctx.guild.get_member(int(i)) for i in top_10[0]]  # type: ignore
+        # Get top 20
+        top_20 = firebase_helper.get_leaderboard(ctx.guild_id)
+        print(f"Raw top_10: {top_20}")
+        members = [ctx.guild.get_member(int(i)) for i in top_20[0] if ctx.guild.get_member(int(i)) != None]  # type: ignore
         if None in members:
             members.remove(None)  # Removes members who aren't on the server
-        kits = [self.INT_MAP[max(1, i)] for i in top_10[2]]  # type: ignore
+        kits = [self.INT_MAP[max(1, i)] for i in top_20[2]]  # type: ignore
 
-        # Create the leaderboard image
-        image = await create_leaderboard(members, top_10[1], kits)  # type: ignore
+        # Create the leaderboard image, now limiting to top 12 (incase of null members, hopefully)
+        image = await create_leaderboard(members[:12], top_20[1][:12], kits[:12])  # type: ignore
 
         # Create an send an embed
         with io.BytesIO() as image_binary:
@@ -126,11 +126,8 @@ class Stats(commands.Cog):
             img_file = discord.File(fp=image_binary, filename="image.png")
             embed = discord.Embed(
                 title="Server PvP Leaderboard",
-                footer=discord.EmbedFooter(
-                    text="PvP Practice Bot", icon_url=self.bot.user.avatar.url  # type: ignore
-                ),
                 color=discord.Colour.from_rgb(50, 127, 168),
-                description="See the **Top 10** Overall best PvPers below:",
+                description="See the full leaderboard at [our website](https://pvp-practice.web.app/)",
                 image="attachment://image.png",
             )
             await ctx.respond(embed=embed, file=img_file)

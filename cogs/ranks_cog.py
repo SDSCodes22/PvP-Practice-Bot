@@ -4,6 +4,7 @@ from regex import F
 from sympy import false
 from helpers import firebase_helper
 from helpers import config_helper
+import asyncio
 
 # If you're looking for the implementation of /ranks, you're looking in the wrong place!
 # Look at the info cog.
@@ -141,6 +142,52 @@ class Ranks(commands.Cog):
             description=f"You have successfully granted {user.name} the {rank} tier in {kit}.",
         )
         await ctx.respond(embed=embed, ephemeral=True)
+
+        # Now close the ticket
+        result = await self._close_ticket(ctx, kit, user)
+        if result > 0:
+            embed = discord.Embed(
+                title="Unable to close ticket",
+                description="Just a warning that the bot was unable to close the ticket properly, don't worry, dev was notifyed (hopefully)",
+                color=0xFF3333,
+            )
+            await ctx.author.send(embed=embed)
+
+            embed = discord.Embed(
+                title="I'm broken!",
+                description=f"in ranks_cog, _close_ticket() returned result {result}. May just be a staff member testing though if its 1. Be concerned if its 2.",
+            )
+            await ctx.guild.get_member(798254943923863612).send(embed=embed)
+
+    async def _close_ticket(
+        self, ctx: discord.ApplicationContext, kit: str, user: discord.Member
+    ) -> int:
+        # Based on the kit, get the channel
+        test_info = firebase_helper.get_test_info(user.id, kit)
+        if test_info == None:
+            return 1
+        channel_id = int(test_info["ticket_channel"])
+        channel = ctx.guild.get_channel(channel_id)  # type: ignore - Guild is NOT None
+
+        if channel == None:
+            return 2
+
+        # Send an embed saying the ticket will be closed to here
+        embed = discord.Embed(
+            title="Closing Ticket",
+            color=0xFF3333,
+            description="The bot detected that this ticket has resulted in a new rank. The bot will now be closing this ticket in 10 seconds.",
+        )
+        await channel.send(embed=embed)  # type: ignore why would it be a forum channel or guild channel????
+
+        # Wait 10 seconds
+        await asyncio.sleep(10)
+
+        # Delete the channel
+        await channel.delete(reason="Ticket concluded")
+        # Delete the ticket document
+        firebase_helper.delete_test(user.id, kit)
+        return 0
 
     @rank_group.command(
         description="[TESTER ONLY!] Remove history and tier for a user in the specified kit.",
