@@ -5,6 +5,7 @@ from sympy import false
 from helpers import firebase_helper
 from helpers import config_helper
 import asyncio
+from views.tester_activity_view import SetActivityView
 
 # If you're looking for the implementation of /ranks, you're looking in the wrong place!
 # Look at the info cog.
@@ -159,6 +160,10 @@ class Ranks(commands.Cog):
             )
             await ctx.guild.get_member(798254943923863612).send(embed=embed)
 
+        # Now create a new ticket for the tester
+        view = SetActivityView()
+        await view.createTickets(ctx.interaction, ctx.author)
+
     async def _close_ticket(
         self, ctx: discord.ApplicationContext, kit: str, user: discord.Member
     ) -> int:
@@ -166,7 +171,7 @@ class Ranks(commands.Cog):
         test_info = firebase_helper.get_test_info(user.id, kit)
         if test_info == None:
             return 1
-        channel_id = int(test_info["ticket_channel"])
+        channel_id = int(test_info["channel_id"])
         channel = ctx.guild.get_channel(channel_id)  # type: ignore - Guild is NOT None
 
         if channel == None:

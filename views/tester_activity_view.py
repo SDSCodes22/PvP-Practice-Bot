@@ -155,7 +155,11 @@ class SetActivityView(discord.ui.View):
             if int(tester_doc["tickets"][kit]) != 0:
                 continue
             # Get top 1 person in that queue
-            top_person: int = firebase_helper.get_queue(kit)[0]
+            try:
+                top_person: int = firebase_helper.get_queue(kit)[0]
+            except IndexError:
+                # There are no people in this queue
+                continue
             user = interaction.guild.get_member(top_person)  # type: ignore
             log.debug(
                 f"User is None: {'Yes' if user == None else 'No'}\nuser name: {user.display_name}"  # type: ignore NOT NONE
